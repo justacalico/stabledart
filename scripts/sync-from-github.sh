@@ -59,10 +59,10 @@ fi
 
 # Move the release tag to the same commit as GitHub using an SSH deploy key.
 # The CI job token cannot modify tags, but a deploy key with write access can.
-if [ -n "${GITLAB_RELEASE_SSH_KEY:-}" ]; then
-  git remote add gitlab-ssh "git@gitlab.com:${CI_PROJECT_PATH}.git" 2>/dev/null || true
+if [ -n "${GITLAB_TOKEN:-}" ]; then
+  git remote add gitlab-https "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST:-gitlab.com}/${CI_PROJECT_PATH}.git" 2>/dev/null || true
   git tag -f "$RELEASE_TAG" "$RELEASE_COMMIT"
-  git push -f gitlab-ssh "$RELEASE_TAG"
+  git push -f gitlab-https "$RELEASE_TAG"
 fi
 
 # Mirror to a GitLab release. The tag is kept the same as GitHub.

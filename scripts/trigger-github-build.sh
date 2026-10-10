@@ -30,7 +30,7 @@ if [ -n "$PUSH_REF" ]; then
   fi
   PUSHED_SHA=$(git rev-parse "$PUSH_REF^{commit}")
   echo "Pushing $PUSHED_SHA to GitHub branch $REF..."
-  git remote add github "git@github.com:$REPO.git" 2>/dev/null || true
+  git remote add github "https://x-access-token:${GH_TOKEN}@github.com/$REPO.git" 2>/dev/null || true
   git remote update github
   git push -f github "$PUSHED_SHA:refs/heads/$REF"
 fi
