@@ -33,6 +33,7 @@ verify:
 
 github-sync:
   stage: sync
+  tags: [linux-truenas]
   <<: *github-common
   timeout: 3h
   rules:
@@ -81,6 +82,7 @@ github-sync:
 
 github-mr-build:
   stage: sync
+  tags: [linux-truenas]
   <<: *github-common
   timeout: 3h
   rules:
