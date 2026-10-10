@@ -72,21 +72,28 @@ if ! git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | grep -q .; then
 fi
 
 # Mirror to a GitLab release with the same tag.
-curl -sf -X POST -H "$AUTH" "$API/releases" \
+curl -s -o /dev/null -X POST -H "$AUTH" "$API/releases" \
   -d "name=StableDart $RELEASE_TAG" \
   -d "tag_name=$RELEASE_TAG" \
   -d "ref=$RELEASE_COMMIT" \
-  --data-urlencode "description=Mirrored from the GitHub release." > /dev/null
+  --data-urlencode "description=Mirrored from the GitHub release."
+code=$(curl -s -o /dev/null -w '%{http_code}' -H "$AUTH" "$API/releases/$RELEASE_TAG")
+if [ "$code" != "200" ]; then
+  echo "could not create or find release $RELEASE_TAG (HTTP $code)" >&2
+  exit 1
+fi
 
 for asset in "$PROJECT_DIR/release-assets"/*; do
   name=$(basename "$asset")
   curl -sf -X PUT -H "$AUTH" --data-binary "@$asset" \
     "$API/packages/generic/release-assets/$RELEASE_TAG/$name" > /dev/null
-  curl -sf -X POST -H "$AUTH" \
+  if ! curl -sf -X POST -H "$AUTH" \
     "$API/releases/$RELEASE_TAG/assets/links" \
     --data-urlencode "name=$name" \
     --data-urlencode "url=${CI_SERVER_URL:-https://gitlab.com}/api/v4/projects/${CI_PROJECT_ID}/packages/generic/release-assets/$RELEASE_TAG/$name" \
-    > /dev/null
+    > /dev/null; then
+    echo "asset link failed for $name" >&2
+  fi
 done
 
 echo "GitLab release $RELEASE_TAG created"
