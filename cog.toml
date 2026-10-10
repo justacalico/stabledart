@@ -6,16 +6,9 @@ skip_ci = "[skip ci]"
 skip_untracked = false
 
 pre_bump_hooks = [
-  "./scripts/build-flutter.sh",
   "./scripts/bump-version.sh {{version}}",
-  "cargo build --release",
 ]
-
-post_bump_hooks = [
-  "git push",
-  "git push origin {{version_tag}}",
-  "./scripts/release.sh {{version_tag}}",
-]
+post_bump_hooks = []
 
 # CI auto-release profile: only bump the version files. The tag pipeline
 # syncs the tag to GitHub where the release build runs, so no local builds,
