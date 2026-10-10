@@ -26,10 +26,12 @@ command -v glab    >/dev/null || { echo "glab not installed"; exit 2; }
 command -v python3 >/dev/null || { echo "python3 not installed"; exit 2; }
 
 hdr "== GitLab runner (section 0) =="
-runner_ids=$(api projects/:id/runners | python3 -c 'import json,sys
+runner_ids=$(for page in 1 2 3; do
+  api "projects/:id/runners?per_page=100&page=$page" | python3 -c 'import json,sys
 try:
     for r in json.load(sys.stdin): print(r.get("id"))
-except Exception: pass')
+except Exception: pass'
+done)
 if grep -qx "$RUNNER_ID" <<<"$runner_ids"; then
   ok "runner $RUNNER_ID assigned to project"
 else
