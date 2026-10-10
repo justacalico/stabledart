@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(needs.setup.outputs.targets) }}
+        include: ${{ fromJSON(needs.setup.outputs.targets) }}
     steps:
       - uses: actions/checkout@v4
         with:
