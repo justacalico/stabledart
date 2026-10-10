@@ -64,7 +64,7 @@ class OutputsStore extends ChangeNotifier {
           _outputs.add(OutputImage.fromJson(item));
         }
       }
-    } on FormatException {
+    } catch (_) {
       // corrupted store -> start fresh
     }
   }

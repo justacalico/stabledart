@@ -22,7 +22,7 @@ class OpenModelDbApi {
     final response = await _client.get(
       Uri.parse(modelsUrl),
       headers: {'Accept': 'application/json'},
-    );
+    ).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw OpenModelDbApiException('HTTP ${response.statusCode}');
     }

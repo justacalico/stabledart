@@ -13,29 +13,56 @@ class InferencePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: InferenceTab.values.length,
-      child: Builder(
-        builder: (context) {
-          final controller = DefaultTabController.of(context);
-          controller.addListener(() {
-            if (!controller.indexIsChanging) {
-              context.read<InferenceStore>().selectTab(
-                InferenceTab.values[controller.index],
-              );
-            }
-          });
-          return PageScaffold(
-            title: 'Inference',
-            headerExtra: TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                for (final t in InferenceTab.values) Tab(text: t.displayName),
-              ],
-            ),
-            child: const _InferenceBody(),
-          );
-        },
+      child: const _InferenceTabs(),
+    );
+  }
+}
+
+class _InferenceTabs extends StatefulWidget {
+  const _InferenceTabs();
+
+  @override
+  State<_InferenceTabs> createState() => _InferenceTabsState();
+}
+
+class _InferenceTabsState extends State<_InferenceTabs> {
+  TabController? _controller;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _controller?.removeListener(_onTabChange);
+    _controller = DefaultTabController.maybeOf(context)
+      ?..addListener(_onTabChange);
+  }
+
+  void _onTabChange() {
+    final controller = _controller;
+    if (controller != null && !controller.indexIsChanging) {
+      context.read<InferenceStore>().selectTab(
+        InferenceTab.values[controller.index],
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onTabChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PageScaffold(
+      title: 'Inference',
+      headerExtra: TabBar(
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
+        tabs: [
+          for (final t in InferenceTab.values) Tab(text: t.displayName),
+        ],
       ),
+      child: const _InferenceBody(),
     );
   }
 }

@@ -61,7 +61,7 @@ class ImageLabStore extends ChangeNotifier {
         }
       }
       if (_conversations.isNotEmpty) _currentId = _conversations.first.id;
-    } on FormatException {
+    } catch (_) {
       // corrupted store -> start fresh
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -11,17 +12,26 @@ abstract class DownloadFileWriter {
   Future<StreamSink<List<int>>> openWrite(String path);
 }
 
+class IoFileWriter implements DownloadFileWriter {
+  @override
+  Future<StreamSink<List<int>>> openWrite(String path) async {
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    return file.openWrite();
+  }
+}
+
 class DownloadService extends ChangeNotifier {
   final DownloadFileWriter? _fileWriter;
   final int maxConcurrent;
 
   final List<DownloadTask> _tasks = [];
-  final Map<String, StreamSubscription<dynamic>> _subscriptions = {};
   final Map<String, http.Client> _taskClients = {};
   final Map<String, bool> _pauseRequests = {};
   int _idCounter = 0;
 
   final http.Client Function() _clientFactory;
+  bool _disposed = false;
 
   DownloadService({
     http.Client? client,
@@ -41,6 +51,14 @@ class DownloadService extends ChangeNotifier {
     String destinationPath = '',
     int totalBytes = 0,
   }) {
+    if (destinationPath.isNotEmpty) {
+      for (final existing in _tasks) {
+        if (existing.destinationPath == destinationPath &&
+            !existing.isFinished) {
+          return existing;
+        }
+      }
+    }
     final task = DownloadTask(
       id: 'dl-${++_idCounter}',
       fileName: fileName,
@@ -71,13 +89,15 @@ class DownloadService extends ChangeNotifier {
   }
 
   Future<void> _start(DownloadTask task) async {
+    if (_disposed) return;
     task.status = DownloadStatus.downloading;
     _pauseRequests[task.id] = false;
     notifyListeners();
     final client = _taskClients.putIfAbsent(task.id, _clientFactory);
+    StreamSink<List<int>>? sink;
     try {
       final request = http.Request('GET', Uri.parse(task.url));
-      final response = await client.send(request);
+      final response = await client.send(request).timeout(const Duration(seconds: 30));
       if (response.statusCode != 200) {
         task.status = DownloadStatus.failed;
         task.errorMessage = 'HTTP ${response.statusCode}';
@@ -89,11 +109,14 @@ class DownloadService extends ChangeNotifier {
       if (response.contentLength != null && response.contentLength! > 0) {
         task.totalBytes = response.contentLength!;
       }
-      final sink = await _fileWriter?.openWrite(task.destinationPath);
+      if (task.destinationPath.isNotEmpty) {
+        sink = await _fileWriter?.openWrite(task.destinationPath);
+      }
       final stopwatch = Stopwatch()..start();
       var lastBytes = 0;
       var lastTick = 0;
       await for (final chunk in response.stream) {
+        if (task.status == DownloadStatus.cancelled) break;
         if (_pauseRequests[task.id] == true) {
           task.status = DownloadStatus.paused;
           notifyListeners();
@@ -119,24 +142,27 @@ class DownloadService extends ChangeNotifier {
         task.bytesPerSecond = 0;
       }
     } catch (e) {
-      if (task.status != DownloadStatus.cancelled) {
+      await sink?.close();
+      if (task.status == DownloadStatus.downloading) {
         task.status = DownloadStatus.failed;
         task.errorMessage = '$e';
       }
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     _cleanup(task.id);
     _pumpQueue();
   }
 
   void _cleanup(String taskId) {
     _taskClients.remove(taskId)?.close();
-    _subscriptions.remove(taskId)?.cancel();
   }
 
   void pause(DownloadTask task) {
     if (task.status != DownloadStatus.downloading) return;
     _pauseRequests[task.id] = true;
+    task.status = DownloadStatus.paused;
+    _taskClients[task.id]?.close();
+    notifyListeners();
   }
 
   void resume(DownloadTask task) {
@@ -144,6 +170,7 @@ class DownloadService extends ChangeNotifier {
         task.status != DownloadStatus.failed) {
       return;
     }
+    _pauseRequests[task.id] = false;
     task.status = DownloadStatus.queued;
     task.receivedBytes = 0;
     task.bytesPerSecond = 0;
@@ -155,7 +182,6 @@ class DownloadService extends ChangeNotifier {
   void cancel(DownloadTask task) {
     if (task.status == DownloadStatus.downloading) {
       task.status = DownloadStatus.cancelled;
-      _pauseRequests[task.id] = true;
       _taskClients[task.id]?.close();
     } else if (task.status == DownloadStatus.queued ||
         task.status == DownloadStatus.paused) {
@@ -174,5 +200,15 @@ class DownloadService extends ChangeNotifier {
   void clearCompleted() {
     _tasks.removeWhere((t) => t.isFinished);
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    for (final client in _taskClients.values) {
+      client.close();
+    }
+    _taskClients.clear();
+    super.dispose();
   }
 }

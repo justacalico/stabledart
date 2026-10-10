@@ -259,7 +259,7 @@ class InferenceStore extends ChangeNotifier {
                 : current.seed;
             final image = OutputImage(
               id: 'out-${DateTime.now().microsecondsSinceEpoch}',
-              filePath: 'outputs/$_tab/$seed.png',
+              filePath: 'outputs/${_tab.name}/$seed.png',
               packageName: 'Inference',
               prompt: current.prompt,
               negativePrompt: current.negativePrompt,

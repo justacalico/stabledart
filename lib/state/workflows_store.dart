@@ -25,7 +25,7 @@ class WorkflowsStore extends ChangeNotifier {
           _workflows.add(InstalledWorkflow.fromJson(item));
         }
       }
-    } on FormatException {
+    } catch (_) {
       // corrupted store -> start fresh
     }
   }

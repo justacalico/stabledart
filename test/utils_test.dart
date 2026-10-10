@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stabledart/utils/paths.dart';
 import 'package:stabledart/utils/file_size.dart';
 import 'package:stabledart/utils/number_format.dart';
 import 'package:stabledart/utils/time_ago.dart';
@@ -107,6 +110,19 @@ void main() {
       expect(NumberFormatMode.fromName('space'), NumberFormatMode.space);
       expect(NumberFormatMode.fromName('none'), NumberFormatMode.none);
       expect(NumberFormatMode.fromName('bogus'), NumberFormatMode.comma);
+    });
+  });
+
+  group('paths', () {
+    test('expandHome expands tilde', () {
+      expect(expandHome('~/foo/bar'),
+          contains(Platform.environment['HOME'] ?? ''));
+      expect(expandHome('/abs/path'), '/abs/path');
+    });
+
+    test('downloadDestination joins models dir', () {
+      expect(downloadDestination('~/data', 'm.safetensors'),
+          contains('/Models/m.safetensors'));
     });
   });
 }

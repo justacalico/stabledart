@@ -15,14 +15,15 @@ class HuggingFaceApi {
   static const host = 'huggingface.co';
 
   final http.Client _client;
-  final String? apiKey;
+  final String? Function() _apiKeyProvider;
 
-  HuggingFaceApi({http.Client? client, this.apiKey})
-    : _client = client ?? http.Client();
+  HuggingFaceApi({http.Client? client, String? apiKey, String? Function()? apiKeyProvider})
+      : _apiKeyProvider = apiKeyProvider ?? (() => apiKey),
+        _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
     'Accept': 'application/json',
-    if (apiKey != null && apiKey!.isNotEmpty) 'Authorization': 'Bearer $apiKey',
+    if (_apiKeyProvider() case final k? when k.isNotEmpty) 'Authorization': 'Bearer $k',
   };
 
   Future<List<HuggingFaceModel>> searchModels({
@@ -39,7 +40,7 @@ class HuggingFaceApi {
     if (query != null && query.isNotEmpty) params['search'] = query;
     if (author != null && author.isNotEmpty) params['author'] = author;
     final uri = Uri.https(host, '/api/models', params);
-    final response = await _client.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw HuggingFaceApiException('HTTP ${response.statusCode}');
     }
@@ -55,7 +56,7 @@ class HuggingFaceApi {
 
   Future<List<HuggingFaceFile>> listFiles(String modelId) async {
     final uri = Uri.https(host, '/api/models/$modelId/tree/main');
-    final response = await _client.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw HuggingFaceApiException('HTTP ${response.statusCode}');
     }

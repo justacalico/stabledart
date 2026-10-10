@@ -117,6 +117,46 @@ void main() {
       await second;
     });
 
+    test('launch converts launch args to flags', () async {
+      final runner = FakeProcessRunner();
+      final store = InstalledPackagesStore(_sm(), runner);
+      final def = PackageRegistry.byName('ComfyUI')!;
+      final pkg = await store.install(def, 'v1');
+      final option = def.launchOptions().first;
+      await store.saveLaunchArgs(pkg, [
+        {'name': option.name, 'enabled': true, 'value': option.initialValue},
+        {'name': 'does-not-exist', 'enabled': true},
+      ]);
+      await store.launch(pkg, onOutput: (_) {});
+      expect(runner.calls.single.any((a) => a.startsWith('-')), isTrue);
+      expect(pkg.isRunning, isFalse);
+    });
+
+    test('launch process failure surfaces to output', () async {
+      final runner = FakeProcessRunner(error: StateError('boom'));
+      final store = InstalledPackagesStore(_sm(), runner);
+      final pkg =
+          await store.install(PackageRegistry.byName('ComfyUI')!, 'v1');
+      final out = <String>[];
+      await store.launch(pkg, onOutput: out.add);
+      expect(out.single, contains('Process failed'));
+      expect(pkg.isRunning, isFalse);
+    });
+
+    test('uninstall stops running package', () async {
+      final runner = FakeProcessRunner(hang: true);
+      final store = InstalledPackagesStore(_sm(), runner);
+      final pkg =
+          await store.install(PackageRegistry.byName('ComfyUI')!, 'v1');
+      final done = store.launch(pkg, onOutput: (_) {});
+      expect(pkg.isRunning, isTrue);
+      await store.uninstall(pkg);
+      await done;
+      expect(runner.stopped, isTrue);
+      expect(store.packages, isEmpty);
+      expect(store.installs, isEmpty);
+    });
+
     test('saveLaunchArgs persists', () async {
       final store = InstalledPackagesStore(_sm(), FakeProcessRunner());
       final pkg =

@@ -149,6 +149,10 @@ void main() {
     final store = InstalledPackagesStore(settings, runner);
     final pkg =
         await store.install(PackageRegistry.byName('ComfyUI')!, 'v1');
+    await store.saveLaunchArgs(pkg, [
+      {'name': 'port', 'enabled': true, 'value': '8188'},
+      {'name': 'port', 'enabled': false, 'value': 'bad'},
+    ]);
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

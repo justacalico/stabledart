@@ -27,9 +27,12 @@ class CivitAiBrowserStore extends ChangeNotifier {
 
   CivitAiBrowserStore(this.api);
 
+  int _searchSeq = 0;
+
   bool get canLoadMore => _nextCursor != null && !_loadingMore;
 
   Future<void> search() async {
+    final seq = ++_searchSeq;
     status = LoadStatus.loading;
     errorMessage = null;
     notifyListeners();
@@ -41,10 +44,12 @@ class CivitAiBrowserStore extends ChangeNotifier {
         period: period,
         nsfw: nsfw,
       );
+      if (seq != _searchSeq) return;
       models = page.items;
       _nextCursor = page.nextCursor;
       status = LoadStatus.success;
     } catch (e) {
+      if (seq != _searchSeq) return;
       status = LoadStatus.failed;
       errorMessage = '$e';
     }
@@ -107,14 +112,21 @@ class HuggingFaceBrowserStore extends ChangeNotifier {
 
   HuggingFaceBrowserStore(this.api);
 
+  int _searchSeq = 0;
+  int _selectSeq = 0;
+
   Future<void> search() async {
+    final seq = ++_searchSeq;
     status = LoadStatus.loading;
     errorMessage = null;
     notifyListeners();
     try {
-      models = await api.searchModels(query: query);
+      final result = await api.searchModels(query: query);
+      if (seq != _searchSeq) return;
+      models = result;
       status = LoadStatus.success;
     } catch (e) {
+      if (seq != _searchSeq) return;
       status = LoadStatus.failed;
       errorMessage = '$e';
     }
@@ -126,14 +138,18 @@ class HuggingFaceBrowserStore extends ChangeNotifier {
   }
 
   Future<void> selectModel(HuggingFaceModel model) async {
+    final seq = ++_selectSeq;
     selected = model;
     files = [];
     status = LoadStatus.loading;
     notifyListeners();
     try {
-      files = await api.listFiles(model.id);
+      final result = await api.listFiles(model.id);
+      if (seq != _selectSeq) return;
+      files = result;
       status = LoadStatus.success;
     } catch (e) {
+      if (seq != _selectSeq) return;
       status = LoadStatus.failed;
       errorMessage = '$e';
     }

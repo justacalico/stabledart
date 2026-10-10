@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/settings_manager.dart';
+import '../../utils/paths.dart';
+
 import '../../models/civit_models.dart';
 import '../../services/download_service.dart';
 import '../../theme/app_theme.dart';
@@ -210,10 +213,13 @@ class _CivitDetailPageState extends State<CivitDetailPage> {
                         icon: const Icon(Icons.download, size: 16),
                         label: const Text('Download'),
                         onPressed: () {
+                          final settings = context.read<SettingsManager>();
                           context.read<DownloadService>().enqueue(
                             fileName: file.name,
                             url: file.downloadUrl,
                             totalBytes: file.sizeBytes,
+                            destinationPath: downloadDestination(
+                                settings.settings.dataDirectory, file.name),
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Download queued')),

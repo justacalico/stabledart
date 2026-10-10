@@ -172,7 +172,7 @@ jobs:
           flutter pub get
           flutter build windows --release --build-name="$VERSION" --build-number="$BUILD_NUMBER"
           RELEASE_DIR="build/windows/x64/runner/Release"
-          (cd "$RELEASE_DIR" && zip -r "$ARTIFACTS_DIR/stabledart-windows-x86_64.zip" . >/dev/null)
+          (cd "$RELEASE_DIR" && 7z a -tzip "$ARTIFACTS_DIR/stabledart-windows-x86_64.zip" ./* >/dev/null)
 
       - name: Build macOS package
         if: matrix.target == 'macos'

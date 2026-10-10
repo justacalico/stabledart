@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=StableDart
+Comment=Manage, launch and extend Stable Diffusion packages
+Exec=stabledart
+Icon=stabledart
+Type=Application
+Categories=Graphics;
+StartupWMClass=stabledart

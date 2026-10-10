@@ -41,12 +41,19 @@ class FakeProcessRunner implements ProcessRunner {
 
   bool hang = false;
 
-  FakeProcessRunner({this.lines = const ['line1', 'line2'], this.hang = false});
+  FakeProcessRunner(
+      {this.lines = const ['line1', 'line2'],
+      this.hang = false,
+      this.error});
+  final Object? error;
 
   @override
   Stream<String> start(String executable, List<String> arguments,
-      {String? workingDirectory, Map<String, String>? environment}) {
+      {String? workingDirectory,
+      Map<String, String>? environment,
+      String? key}) {
     calls.add([executable, ...arguments]);
+    if (error != null) return Stream.error(error!);
     if (hang) {
       final c = StreamController<String>();
       _controllers.add(c);

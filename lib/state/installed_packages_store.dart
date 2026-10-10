@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/launch_option.dart';
+import '../utils/paths.dart';
+
 import '../models/installed_package.dart';
 import '../models/package_definition.dart';
 import '../services/package_registry.dart';
@@ -51,7 +54,7 @@ class InstalledPackagesStore extends ChangeNotifier {
         }
         _idCounter = _packages.length;
       }
-    } on FormatException {
+    } catch (_) {
       // corrupted state -> start fresh
     }
   }
@@ -102,7 +105,7 @@ class InstalledPackagesStore extends ChangeNotifier {
       displayName: definition.displayName,
       version: version,
       installPath:
-          '${_settings.settings.dataDirectory}/Packages/${definition.name}',
+          '${expandHome(_settings.settings.dataDirectory)}/Packages/${definition.name}',
       installedAt: DateTime.now(),
     );
     _packages.add(pkg);
@@ -118,7 +121,9 @@ class InstalledPackagesStore extends ChangeNotifier {
   }
 
   Future<void> uninstall(InstalledPackage package) async {
+    if (package.isRunning) await stop(package);
     _packages.removeWhere((p) => p.id == package.id);
+    _installs.remove(package.packageName);
     await _persist();
     notifyListeners();
   }
@@ -141,16 +146,37 @@ class InstalledPackagesStore extends ChangeNotifier {
     package.isRunning = true;
     notifyListeners();
     try {
-      await for (final line in _runner.start('python', [
-        'launch.py',
-        for (final arg in package.launchArgs) '$arg',
-      ], workingDirectory: package.installPath)) {
+      await for (final line in _runner.start(
+        'python',
+        ['launch.py', ..._launchArgs(package)],
+        workingDirectory: package.installPath,
+        environment: _settings.settings.environmentVariables,
+        key: package.id,
+      )) {
         onOutput(line);
       }
+    } catch (e) {
+      onOutput('Process failed: $e');
     } finally {
       package.isRunning = false;
       notifyListeners();
     }
+  }
+
+  List<String> _launchArgs(InstalledPackage package) {
+    final def = definitionFor(package);
+    final args = <String>[];
+    for (final raw in package.launchArgs) {
+      for (final option in def?.launchOptions() ?? <LaunchOption>[]) {
+        if (option.name == raw['name']) {
+          option.applyJson(raw);
+          final arg = option.toArgString();
+          if (arg != null) args.add(arg);
+          break;
+        }
+      }
+    }
+    return args;
   }
 
   Future<void> stop(InstalledPackage package) async {

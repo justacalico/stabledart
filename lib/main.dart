@@ -57,14 +57,18 @@ Widget buildApp(dynamic prefs, String appVersion) {
       ChangeNotifierProvider(
         create: (_) => DownloadService(
           maxConcurrent: settings.settings.maxConcurrentDownloads,
+          fileWriter: IoFileWriter(),
         ),
       ),
       Provider<CivitAiApi>(
-        create: (_) => CivitAiApi(apiKey: settings.settings.civitAiApiKey),
+        create: (_) => CivitAiApi(
+          apiKeyProvider: () => settings.settings.civitAiApiKey,
+        ),
       ),
       Provider<HuggingFaceApi>(
-        create: (_) =>
-            HuggingFaceApi(apiKey: settings.settings.huggingFaceApiKey),
+        create: (_) => HuggingFaceApi(
+          apiKeyProvider: () => settings.settings.huggingFaceApiKey,
+        ),
       ),
       Provider<OpenModelDbApi>(create: (_) => OpenModelDbApi()),
       Provider<CivArchiveApi>(create: (_) => CivArchiveApi()),

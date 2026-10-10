@@ -25,7 +25,7 @@ class GitHubVersionsApi {
     final response = await _client.get(
       uri,
       headers: {'Accept': 'application/json'},
-    );
+    ).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw GitHubApiException('HTTP ${response.statusCode}');
     }
@@ -51,7 +51,7 @@ class GitHubVersionsApi {
     final response = await _client.get(
       uri,
       headers: {'Accept': 'application/json'},
-    );
+    ).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw GitHubApiException('HTTP ${response.statusCode}');
     }

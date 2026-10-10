@@ -71,22 +71,22 @@ URL: https://gitlab.com/HttpAnimations/stabledart
 %global __requires_exclude %{requires_exclude}
 
 %description
-A secure, self-hostable Material 3 client for managing Devin work.
+A Flutter desktop port of Stability Matrix for managing Stable Diffusion packages.
 
 %install
 mkdir -p %{buildroot}/opt/stabledart %{buildroot}/usr/bin
 cp -a "%{bundle_dir}/." %{buildroot}/opt/stabledart/
-ln -sf /opt/stabledart/stabledart_frontend %{buildroot}/usr/bin/stabledart
+ln -sf /opt/stabledart/stabledart %{buildroot}/usr/bin/stabledart
 # The desktop file is named after the app id so Wayland/GNOME can match the
 # running window to the launcher without relying on StartupWMClass alone.
-install -Dm644 "%{linux_assets}/stabledart.desktop" %{buildroot}/usr/share/applications/gitlab.openlyst.stabledart.desktop
+install -Dm644 "%{linux_assets}/stabledart.desktop" %{buildroot}/usr/share/applications/gitlab.httpanimations.stabledart.desktop
 install -Dm644 "%{linux_assets}/stabledart.svg" %{buildroot}/usr/share/icons/hicolor/scalable/apps/stabledart.svg
 install -Dm644 "%{license_file}" %{buildroot}/usr/share/licenses/stabledart/LICENSE
 
 %files
 /opt/stabledart
 /usr/bin/stabledart
-/usr/share/applications/gitlab.openlyst.stabledart.desktop
+/usr/share/applications/gitlab.httpanimations.stabledart.desktop
 /usr/share/icons/hicolor/scalable/apps/stabledart.svg
 %license /usr/share/licenses/stabledart/LICENSE
 EOF

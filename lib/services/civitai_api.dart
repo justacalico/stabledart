@@ -23,14 +23,15 @@ class CivitAiApi {
   static const apiBase = 'https://civitai.com/api/v1';
 
   final http.Client _client;
-  final String? apiKey;
+  final String? Function() _apiKeyProvider;
 
-  CivitAiApi({http.Client? client, this.apiKey})
-    : _client = client ?? http.Client();
+  CivitAiApi({http.Client? client, String? apiKey, String? Function()? apiKeyProvider})
+      : _apiKeyProvider = apiKeyProvider ?? (() => apiKey),
+        _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
     'Accept': 'application/json',
-    if (apiKey != null && apiKey!.isNotEmpty) 'Authorization': 'Bearer $apiKey',
+    if (_apiKeyProvider() case final k? when k.isNotEmpty) 'Authorization': 'Bearer $k',
   };
 
   Future<CivitModelsPage> getModels({
@@ -55,7 +56,7 @@ class CivitAiApi {
     if (cursor != null && cursor.isNotEmpty) params['cursor'] = cursor;
 
     final uri = Uri.https(host, '/api/v1/models', params);
-    final response = await _client.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw CivitApiException('HTTP ${response.statusCode}');
     }
@@ -81,7 +82,7 @@ class CivitAiApi {
 
   Future<CivitModel> getModel(int id) async {
     final uri = Uri.https(host, '/api/v1/models/$id');
-    final response = await _client.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw CivitApiException('HTTP ${response.statusCode}');
     }
@@ -94,7 +95,7 @@ class CivitAiApi {
 
   Future<CivitModelVersion> getModelVersion(int id) async {
     final uri = Uri.https(host, '/api/v1/model-versions/$id');
-    final response = await _client.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw CivitApiException('HTTP ${response.statusCode}');
     }

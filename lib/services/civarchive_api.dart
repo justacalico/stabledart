@@ -25,7 +25,7 @@ class CivArchiveApi {
     final response = await _client.get(
       uri,
       headers: {'Accept': 'application/json'},
-    );
+    ).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw CivArchiveApiException('HTTP ${response.statusCode}');
     }

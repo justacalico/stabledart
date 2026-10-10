@@ -8,8 +8,9 @@ abstract class ProcessRunner {
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    String? key,
   });
-  Future<void> stop(String executable);
+  Future<void> stop(String key);
   Future<ProcessResult> run(
     String executable,
     List<String> arguments, {
@@ -19,7 +20,7 @@ abstract class ProcessRunner {
 }
 
 class SystemProcessRunner implements ProcessRunner {
-  Process? _process;
+  final Map<String, Process> _processes = {};
 
   @override
   Stream<String> start(
@@ -27,22 +28,38 @@ class SystemProcessRunner implements ProcessRunner {
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    String? key,
   }) async* {
-    _process = await Process.start(
+    final process = await Process.start(
       executable,
       arguments,
       workingDirectory: workingDirectory,
       environment: environment,
     );
-    yield* _process!.stdout
-        .transform(SystemEncoding().decoder)
-        .transform(const LineSplitter());
+    final id = key ?? executable;
+    _processes[id] = process;
+    final controller = StreamController<String>();
+    final decoder = SystemEncoding().decoder;
+    var open = 2;
+    for (final output in [process.stdout, process.stderr]) {
+      output
+          .transform(decoder)
+          .transform(const LineSplitter())
+          .listen(
+            controller.add,
+            onError: controller.addError,
+            onDone: () {
+              if (--open == 0) unawaited(controller.close());
+            },
+          );
+    }
+    yield* controller.stream;
+    _processes.remove(id);
   }
 
   @override
-  Future<void> stop(String executable) async {
-    _process?.kill();
-    _process = null;
+  Future<void> stop(String key) async {
+    _processes.remove(key)?.kill();
   }
 
   @override

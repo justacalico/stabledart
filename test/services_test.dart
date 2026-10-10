@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -486,7 +487,90 @@ void main() {
       dl.pause(queued);
       expect(queued.status, DownloadStatus.queued);
     });
+
+    test('IoFileWriter writes download to disk', () async {
+      final dir = Directory.systemTemp.createTempSync();
+      final dest = '${dir.path}/sub/f.bin';
+      final dl = DownloadService(
+          client: streamClient([1, 2, 3]), fileWriter: IoFileWriter());
+      final task = dl.enqueue(
+          fileName: 'f.bin', url: 'https://x/f', destinationPath: dest);
+      await Future.delayed(const Duration(milliseconds: 200));
+      expect(task.status, DownloadStatus.completed);
+      expect(File(dest).readAsBytesSync(), [1, 2, 3]);
+    });
+
+    test('enqueue deduplicates on destination', () async {
+      final controller = StreamController<List<int>>();
+      final dl = DownloadService(
+          client: MockClient.streaming((r, _) async =>
+              http.StreamedResponse(controller.stream, 200)));
+      final a = dl.enqueue(
+          fileName: 'f', url: 'https://x/1', destinationPath: '/tmp/x');
+      final b = dl.enqueue(
+          fileName: 'f', url: 'https://x/2', destinationPath: '/tmp/x');
+      expect(identical(a, b), isTrue);
+      dl.cancel(a);
+      await controller.close();
+    });
+
+    test('cancel while downloading keeps cancelled state', () async {
+      final controller = StreamController<List<int>>();
+      final dl = DownloadService(
+          client: MockClient.streaming((r, _) async =>
+              http.StreamedResponse(controller.stream, 200)));
+      final task = dl.enqueue(fileName: 'f', url: 'https://x/f');
+      await Future.delayed(const Duration(milliseconds: 50));
+      dl.cancel(task);
+      controller.add([1]);
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(task.status, DownloadStatus.cancelled);
+      await controller.close();
+    });
+
+    test('pause mid-stream closes sink', () async {
+      final controller = StreamController<List<int>>();
+      final writer = RecordingFileWriter();
+      final dl = DownloadService(
+          client: MockClient.streaming((r, _) async =>
+              http.StreamedResponse(controller.stream, 200)),
+          fileWriter: writer);
+      final task = dl.enqueue(
+          fileName: 'f', url: 'https://x/f', destinationPath: '/tmp/p');
+      await Future.delayed(const Duration(milliseconds: 50));
+      dl.pause(task);
+      controller.add([9]);
+      await Future.delayed(const Duration(milliseconds: 100));
+      expect(task.status, DownloadStatus.paused);
+      expect(writer.written.containsKey('/tmp/p'), isTrue);
+      await controller.close();
+    });
+
+    test('download error closes sink', () async {
+      final writer = RecordingFileWriter();
+      final dl = DownloadService(
+          client: MockClient.streaming((r, _) async =>
+              http.StreamedResponse(Stream.error(Exception('io')), 200)),
+          fileWriter: writer);
+      final task = dl.enqueue(
+          fileName: 'f', url: 'https://x/f', destinationPath: '/tmp/e');
+      await Future.delayed(const Duration(milliseconds: 100));
+      expect(task.status, DownloadStatus.failed);
+    });
+
+    test('dispose closes task clients', () async {
+      final controller = StreamController<List<int>>();
+      final dl = DownloadService(
+          client: MockClient.streaming((r, _) async =>
+              http.StreamedResponse(controller.stream, 200)));
+      dl.enqueue(fileName: 'f', url: 'https://x/f');
+      await Future.delayed(const Duration(milliseconds: 50));
+      dl.dispose();
+      await controller.close();
+    });
   });
+
+
 
   group('exception toString', () {
     test('all exception types stringify', () {

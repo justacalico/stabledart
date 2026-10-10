@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../services/download_service.dart';
 import '../../../services/huggingface_api.dart';
+import '../../../services/settings_manager.dart';
+import '../../../utils/paths.dart';
 import '../../../state/model_browser_store.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/file_size.dart';
@@ -162,18 +164,26 @@ class _HuggingFaceBrowserViewState extends State<HuggingFaceBrowserView> {
                                             size: 18,
                                           ),
                                           onPressed: () {
+                                            final fileName = file.path
+                                                .split('/')
+                                                .last;
+                                            final dir = context
+                                                .read<SettingsManager>()
+                                                .settings
+                                                .dataDirectory;
                                             context
                                                 .read<DownloadService>()
                                                 .enqueue(
-                                                  fileName: file.path
-                                                      .split('/')
-                                                      .last,
+                                                  fileName: fileName,
                                                   url:
                                                       HuggingFaceApi.downloadUrl(
                                                         store.selected!.id,
                                                         file.path,
                                                       ),
                                                   totalBytes: file.size,
+                                                  destinationPath:
+                                                      downloadDestination(
+                                                          dir, fileName),
                                                 );
                                             ScaffoldMessenger.of(
                                               context,

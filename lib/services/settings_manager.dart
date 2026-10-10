@@ -28,7 +28,7 @@ class SettingsManager extends ChangeNotifier {
           jsonDecode(raw) as Map<String, dynamic>,
         );
         return;
-      } on FormatException {
+      } catch (_) {
         // fall through to defaults
       }
     }
@@ -36,8 +36,12 @@ class SettingsManager extends ChangeNotifier {
   }
 
   Future<void> save() async {
-    await _backend.setString(_settingsKey, jsonEncode(settings.toJson()));
-    notifyListeners();
+    try {
+      await _backend.setString(
+          _settingsKey, jsonEncode(settings.toJson()));
+    } finally {
+      notifyListeners();
+    }
   }
 
   void update(void Function(AppSettings) mutate) {

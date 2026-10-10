@@ -231,6 +231,7 @@ class _PackageInstallDetailPageState extends State<PackageInstallDetailPage> {
       final api = context.read<GitHubVersionsApi>();
       final tags = await api.getTags(widget.definition.repositoryUrl);
       final branches = await api.getBranches(widget.definition.repositoryUrl);
+      if (!mounted) return;
       setState(() {
         _versions = {
           'latest',
@@ -241,6 +242,7 @@ class _PackageInstallDetailPageState extends State<PackageInstallDetailPage> {
         _loadingVersions = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _versionsError = '$e';
         _loadingVersions = false;

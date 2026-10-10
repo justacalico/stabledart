@@ -66,7 +66,7 @@ class ModelIndexService extends ChangeNotifier {
           _models.add(LocalModelFile.fromJson(item));
         }
       }
-    } on FormatException {
+    } catch (_) {
       // corrupted index -> start fresh
     }
   }

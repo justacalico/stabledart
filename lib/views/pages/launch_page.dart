@@ -17,6 +17,17 @@ class LaunchPage extends StatefulWidget {
 }
 
 class _LaunchPageState extends State<LaunchPage> {
+  int _webUiPort(dynamic package) {
+    for (final arg in package.launchArgs as List) {
+      if (arg is Map &&
+          (arg['name'] == 'port' || arg['name'] == 'Port') &&
+          arg['enabled'] == true) {
+        return int.tryParse('${arg['value']}') ?? 7860;
+      }
+    }
+    return 7860;
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<InstalledPackagesStore>();
@@ -39,12 +50,8 @@ class _LaunchPageState extends State<LaunchPage> {
                   onPressed: package.isRunning
                       ? () => store.stop(package)
                       : () {
-                          store.launch(
-                            package,
-                            onOutput: (line) {
-                              context.read<ConsoleStore>().log(line);
-                            },
-                          );
+                          final console = context.read<ConsoleStore>();
+                          store.launch(package, onOutput: console.log);
                         },
                   icon: Icon(package.isRunning ? Icons.stop : Icons.play_arrow),
                   label: Text(package.isRunning ? 'Stop' : 'Launch'),
@@ -58,7 +65,8 @@ class _LaunchPageState extends State<LaunchPage> {
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: package.isRunning
-                      ? () => launchUrl(Uri.parse('http://localhost:7860'))
+                      ? () => launchUrl(
+                          Uri.parse('http://localhost:${_webUiPort(package)}'))
                       : null,
                   icon: const Icon(Icons.open_in_browser, size: 18),
                   label: const Text('Open Web UI'),
