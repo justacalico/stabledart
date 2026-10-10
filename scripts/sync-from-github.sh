@@ -3,6 +3,10 @@ set -euo pipefail
 
 export PATH="$HOME/.local/bin:$PATH"
 
+if [ -n "${GITLAB_TOKEN:-}" ]; then
+  printf '%s' "$GITLAB_TOKEN" | glab auth login     --hostname "${CI_SERVER_HOST:-gitlab.com}" --stdin >/dev/null 2>&1 || true
+fi
+
 RELEASE_TAG="${RELEASE_TAG:-}"
 GITHUB_RUN_ID="${GITHUB_RUN_ID:-}"
 PROJECT_DIR="${CI_PROJECT_DIR:-$PWD}"
