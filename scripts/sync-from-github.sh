@@ -52,30 +52,41 @@ cp SHA256SUMS.txt release-assets/
 
 ls -la release-assets/
 
+API="${CI_API_V4_URL:-https://gitlab.com/api/v4}/projects/${CI_PROJECT_ID}"
+AUTH="Authorization: Bearer $GITLAB_TOKEN"
+
 # Remove any stale GitLab release, tag and generic package so the
 # package-registry upload does not collide with existing assets and the release
 # is recreated at the current commit.
-glab release delete "$RELEASE_TAG" -R "$CI_PROJECT_PATH" -y 2>/dev/null || true
-PKG_ID=$(glab api "projects/$CI_PROJECT_ID/packages?package_name=release-assets&package_version=$RELEASE_TAG" 2>/dev/null | jq -r 'if type == "array" and length > 0 then .[0].id else empty end' 2>/dev/null || true)
+curl -sf -X DELETE -H "$AUTH" "$API/releases/$RELEASE_TAG" || true
+PKG_ID=$(curl -sf -H "$AUTH" "$API/packages?package_name=release-assets&package_version=$RELEASE_TAG" 2>/dev/null | jq -r 'if type == "array" and length > 0 then .[0].id else empty end' 2>/dev/null || true)
 if [ -n "$PKG_ID" ] && [ "$PKG_ID" != "null" ]; then
-  glab api --method DELETE "projects/$CI_PROJECT_ID/packages/$PKG_ID" 2>/dev/null || true
+  curl -sf -X DELETE -H "$AUTH" "$API/packages/$PKG_ID" || true
 fi
 
-# Move the release tag to the same commit as GitHub using an SSH deploy key.
-# The CI job token cannot modify tags, but a deploy key with write access can.
-if git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | grep -q .; then
-  git push -f gitlab-https "refs/tags/${RELEASE_TAG}" 2>/dev/null || true
-else
+# Mirror the tag only when GitLab does not already have it.
+if ! git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | grep -q .; then
   git remote add gitlab-https "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST:-gitlab.com}/${CI_PROJECT_PATH}.git" 2>/dev/null || true
   git tag -f "$RELEASE_TAG" "$RELEASE_COMMIT"
   git push -f gitlab-https "refs/tags/${RELEASE_TAG}"
 fi
 
-# Mirror to a GitLab release. The tag is kept the same as GitHub.
-# glab in CI will use CI_JOB_TOKEN when GLAB_ENABLE_CI_AUTOLOGIN is set.
-glab release create "$RELEASE_TAG" \
-  --name "StableDart $RELEASE_TAG" \
-  --notes "Mirrored from the GitHub release." \
-  --ref "$RELEASE_COMMIT" \
-  --use-package-registry \
-  "$PROJECT_DIR/release-assets"/*
+# Mirror to a GitLab release with the same tag.
+curl -sf -X POST -H "$AUTH" "$API/releases" \
+  -d "name=StableDart $RELEASE_TAG" \
+  -d "tag_name=$RELEASE_TAG" \
+  -d "ref=$RELEASE_COMMIT" \
+  --data-urlencode "description=Mirrored from the GitHub release." > /dev/null
+
+for asset in "$PROJECT_DIR/release-assets"/*; do
+  name=$(basename "$asset")
+  curl -sf -X PUT -H "$AUTH" --data-binary "@$asset" \
+    "$API/packages/generic/release-assets/$RELEASE_TAG/$name" > /dev/null
+  curl -sf -X POST -H "$AUTH" \
+    "$API/releases/$RELEASE_TAG/assets/links" \
+    --data-urlencode "name=$name" \
+    --data-urlencode "url=${CI_SERVER_URL:-https://gitlab.com}/api/v4/projects/${CI_PROJECT_ID}/packages/generic/release-assets/$RELEASE_TAG/$name" \
+    > /dev/null
+done
+
+echo "GitLab release $RELEASE_TAG created"
