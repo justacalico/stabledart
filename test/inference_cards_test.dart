@@ -30,7 +30,6 @@ void main() {
     await tester.enterText(
         find.byKey(const ValueKey('negative-prompt-field')), 'blur');
     await tester.pump();
-    final store = tester.element(find.byType(PromptCard)).read<InferenceStore>();
     expect(find.text('a castle'), findsOneWidget);
   });
 
@@ -129,7 +128,6 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final sm = TestProviders.memorySettings();
-    final outputs = <String>[];
     final inf = InferenceStore(
         defaults: sm.settings,
         backend: MockInferenceBackend(stepDelay: Duration.zero));

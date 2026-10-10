@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:stabledart/app.dart';
 import 'package:stabledart/main.dart' as app_main;
 import 'package:stabledart/services/version_checker.dart';
-import 'package:stabledart/state/navigation_store.dart';
 import 'package:stabledart/state/version_store.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -5,7 +5,6 @@ import 'package:stabledart/state/installed_packages_store.dart';
 import 'package:stabledart/services/package_registry.dart';
 import 'package:stabledart/state/outputs_store.dart';
 import 'package:stabledart/state/workflows_store.dart';
-import 'package:stabledart/state/image_lab_store.dart';
 import 'package:stabledart/state/model_index_service.dart';
 import 'package:stabledart/models/local_model.dart';
 import 'package:stabledart/models/output_image.dart';
@@ -27,7 +26,6 @@ import 'package:stabledart/views/pages/model_browser_page.dart';
 import 'package:stabledart/views/pages/outputs_page.dart';
 import 'package:stabledart/views/pages/packages_page.dart';
 import 'package:stabledart/views/pages/civit_detail_page.dart';
-import 'package:stabledart/views/pages/settings_page.dart';
 import 'package:stabledart/views/pages/workflows_page.dart';
 import 'package:stabledart/services/download_service.dart';
 import 'package:stabledart/models/download_task.dart';
@@ -324,7 +322,7 @@ void main() {
                 contentLength: 2)));
     await pumpPage(tester, const ActivityPage(), downloads: downloads);
     expect(find.text('No Activity'), findsOneWidget);
-    final task = downloads.enqueue(
+    downloads.enqueue(
         fileName: 'f.bin', url: 'https://x/f', totalBytes: 2);
     await tester.pumpAndSettle();
     expect(find.text('f.bin'), findsOneWidget);

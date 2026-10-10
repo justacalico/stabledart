@@ -450,7 +450,7 @@ void main() {
 
     test('remove and clearCompleted', () async {
       final dl = DownloadService(client: streamClient([1]));
-      final task = dl.enqueue(fileName: 'f', url: 'https://x/f');
+      dl.enqueue(fileName: 'f', url: 'https://x/f');
       await Future.delayed(const Duration(milliseconds: 100));
       dl.clearCompleted();
       expect(dl.tasks, isEmpty);
